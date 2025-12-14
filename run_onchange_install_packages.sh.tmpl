@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# setup.yml hash: {{ include "setup.yml" | sha256sum }}
+
+echo "Config changed. Running Ansible for Arch Linux..."
+
+# Kita tambahkan --ask-become-pass agar ansible meminta password sudo untuk task pacman
+ansible-playbook {{ joinPath .chezmoi.sourceDir "setup.yml" }} --ask-become-pass

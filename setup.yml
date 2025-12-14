@@ -1,0 +1,68 @@
+---
+- hosts: localhost
+  connection: local
+  become: false
+
+  tasks:
+    # -------------------------------------------------------
+    # 1. OFFICIAL PACKAGES (Pacman)
+    #    Berjalan sebagai Root (become: true)
+    # -------------------------------------------------------
+    - name: Update Pacman Cache & Install Official Packages
+      become: true
+      community.general.pacman:
+        update_cache: yes
+        state: present
+        name:
+          # --- Core & Development ---
+          - base-devel
+          - git
+          - neovim        # Nama paket yang benar 'neovim', bukan 'nvim'
+          - nodejs
+          - npm
+          - docker
+          - stow
+          - networkmanager
+
+          # --- Shell & Terminal Utilities ---
+          # (Dipindahkan dari AUR ke sini karena tersedia di Official Repo)
+          - zsh
+          - tmux
+          - ripgrep
+          - fd
+          - fzf
+          - zoxide
+          - eza
+          - btop
+          - pass
+          - starship
+          - cmatrix       # Tersedia di repo 'extra'
+          - asciiquarium  # Tersedia di repo 'extra'
+
+          # --- GUI / Terminals ---
+          - kitty
+          - alacritty
+          # ghostty dipindah ke AUR (ghostty-git) karena seringkali belum ada di stable repo
+
+          # --- Hyprland Ecosystem ---
+          - hypridle
+          - hyprlock
+          - hyprpaper
+          - wofi
+          - swaync
+
+    # -------------------------------------------------------
+    # 2. AUR PACKAGES (Yay)
+    #    Berjalan sebagai User Biasa (become: false)
+    # -------------------------------------------------------
+    - name: Install AUR Packages with Yay
+      become: false
+      command: yay -S --noconfirm --needed {{ item }}
+      loop:
+        - bun-bin           # Gunakan binary agar instalasi cepat
+        - ghostty-git       # Terminal Ghostty (versi git dari AUR)
+        - zen-browser-bin   # Browser Zen (versi binary)
+        # Tambahkan aplikasi lain yang HANYA ada di AUR di bawah ini:
+        # - visual-studio-code-bin 
+      register: yay_result
+      changed_when: "'there is nothing to do' not in yay_result.stdout"

@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Script ini hanya berjalan di Linux
+{{ if eq .chezmoi.os "linux" -}}
+
+echo "=================================================="
+echo "   SETUP GPG & PASS PASSWORD MANAGER"
+echo "=================================================="
+
+# 1. Cek apakah GPG Key sudah ada
+if gpg --list-secret-keys | grep -q "^sec"; then
+    echo "✅ GPG Secret Key sudah terdeteksi. Melewati proses import."
+else
+    echo "⚠️  GPG Secret Key belum ditemukan."
+    echo "   Pastikan Anda sudah memiliki file 'private-key.asc' dan 'public-key.asc' di komputer ini."
+    
+    # 2. Input Path Private Key
+    while true; do
+        read -p "👉 Masukkan lokasi file PRIVATE KEY (contoh: /home/user/private.asc): " PRIV_PATH
+        # Hapus tanda kutip jika user drag-drop file
+        PRIV_PATH=$(echo "$PRIV_PATH" | tr -d "'\"")
+        
+        if [ -f "$PRIV_PATH" ]; then
+            echo "   Mengimport Private Key..."
+            gpg --import "$PRIV_PATH"
+            break
+        else
+            echo "❌ File tidak ditemukan di: $PRIV_PATH. Coba lagi."
+        fi
+    done
+
+    # 3. Input Path Public Key (Opsional tapi disarankan)
+    read -p "👉 Masukkan lokasi file PUBLIC KEY (Tekan Enter jika sudah tergabung di file private): " PUB_PATH
+    PUB_PATH=$(echo "$PUB_PATH" | tr -d "'\"")
+    
+    if [ ! -z "$PUB_PATH" ] && [ -f "$PUB_PATH" ]; then
+        echo "   Mengimport Public Key..."
+        gpg --import "$PUB_PATH"
+    fi
+fi
+
+# 4. Mendapatkan GPG Key ID secara otomatis
+# Mengambil ID dari key pertama yang ditemukan di list secret keys
+GPG_KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep "^sec" | head -n 1 | awk '{print $2}' | cut -d'/' -f2)
+
+if [ -z "$GPG_KEY_ID" ]; then
+    echo "❌ Gagal mendapatkan GPG Key ID. Pastikan import berhasil."
+    exit 1
+fi
+
+echo "🔑 Terdeteksi Key ID: $GPG_KEY_ID"
+
+# 5. Mengatur Trust Level ke 'Ultimate' (Penting agar tidak muncul warning terus)
+echo "   Mengatur Trust Level ke Ultimate..."
+# Mengirim perintah 'trust' -> pilih '5' (ultimate) -> 'y' (confirm)
+(echo 5; echo y; echo save) | gpg --command-fd 0 --no-tty --edit-key "$GPG_KEY_ID" trust >/dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "✅ GPG Key Trusted."
+else
+    echo "⚠️  Gagal set trust level. Anda mungkin perlu melakukannya manual: gpg --edit-key $GPG_KEY_ID"
+fi
+
+# 6. Inisialisasi Pass
+if [ -d "$HOME/.password-store" ]; then
+    echo "✅ Folder .password-store sudah ada."
+else
+    echo "🚀 Menginisialisasi pass..."
+    pass init "$GPG_KEY_ID"
+    
+    # Opsional: Jika Anda punya repo git untuk password store, Anda bisa clone di sini
+    # read -p "Apakah Anda ingin clone repo password-store sekarang? (y/n) " CLONE_PASS
+    # if [[ "$CLONE_PASS" == "y" ]]; then
+    #    rm -rf ~/.password-store
+    #    git clone <URL_REPO_PASS_ANDA> ~/.password-store
+    # fi
+fi
+
+echo "=================================================="
+echo "   SETUP SELESAI"
+echo "=================================================="
+
+{{ end -}}
