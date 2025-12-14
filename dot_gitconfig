@@ -1,0 +1,5 @@
+[http]
+	sslVerify = true
+[user]
+	email = arzibusiness1@gmail.com
+	name = ArziTech

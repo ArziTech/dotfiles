@@ -1,0 +1,61 @@
+---
+- hosts: localhost
+  connection: local
+  become: false  # Default jangan root, karena yay tidak boleh dijalankan sebagai root
+
+  tasks:
+    # 1. Update System & Install Paket Official (butuh sudo/root)
+    - name: Update Pacman Cache & Install Official Packages
+      become: true  # Aktifkan sudo khusus untuk task ini
+      community.general.pacman:
+        update_cache: yes
+        name:
+          - neovim
+          - git
+          - tmux
+          - zsh
+          - ripgrep
+          - base-devel # Penting untuk compile AUR
+          - docker
+          - git 
+          - docker
+          - nvim
+          - ghostty
+          - kitty
+          - alacrity
+          - node
+          - npm 
+          - bun
+          # (this is not the package name, if im not wrong nmcli) networkmanager
+          - zen-browser
+
+          - Hyprland related
+          - Hyprland
+          - hypridle
+          - hyprlock
+          - hyprpaper
+          - wofi 
+          - swaync
+          - zsh # -> this probably already installed
+          - starship
+          - stow
+        state: present
+
+    # 2. Install Paket AUR menggunakan Yay (JANGAN pakai sudo/become)
+    - name: Install AUR Packages with Yay
+      command: yay -S --noconfirm --needed {{ item }}
+      loop:
+      # Terminal Related
+        - tmux
+        - fd
+        - ripgrep
+        - fzf
+        - zoxide
+        - eza
+        - pass
+      # additional applications
+        - btop
+        - cmatrix
+        - asciiquarium
+      register: yay_result
+      changed_when: "'there is nothing to do' not in yay_result.stdout"
